@@ -11,3 +11,17 @@ Python 3.10+ (используются современные аннотации
 ## 3. Запуск
 
 - В терминале из папки проекта:
+
+## 4. Тестирование
+
+Тесты лежат в пакете `tests/` и написаны на pytest:
+`parametrize`, `pytest.raises(match=...)`, `pytest.approx`,
+фикстура `tmp_path`, интеграционные тесты CLI — через subprocess.
+
+Запуск:
+    pip install pytest
+    pytest                    # ~120 тестов из tests/
+    python run_self_tests.py  # автономная самопроверка без pytest (23 проверки)
+
+Покрытие по модулям: generator (20), stats (22), moving_average (24),
+deque_average (16), io_json (6), io_file (13), cli (18).
