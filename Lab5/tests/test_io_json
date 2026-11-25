@@ -1,0 +1,58 @@
+"""Тесты JSON-ввода-вывода с изоляцией файловой системы через tmp_path."""
+
+import json
+
+import pytest
+
+from num_series.generator import discrete_series
+from num_series.io_json import load_series_json, save_series_json
+
+
+def test_roundtrip(tmp_path):
+    """Сохранение и чтение: данные и метаданные сохраняются точно."""
+    data = discrete_series(50, seed=41)
+    path = tmp_path / "series.json"
+    meta = {"kind": "discrete", "n": 50, "seed": 41, "variant": 7}
+
+    save_series_json(data, path, meta=meta)
+    loaded = load_series_json(path)
+
+    assert loaded == data
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for key, value in meta.items():
+        assert payload["meta"][key] == value
+    assert "created" in payload["meta"]
+
+
+def test_save_empty_raises(tmp_path):
+    with pytest.raises(ValueError, match="пустой ряд"):
+        save_series_json([], tmp_path / "empty.json")
+
+
+def test_load_without_data_key(tmp_path):
+    path = tmp_path / "broken.json"
+    path.write_text(json.dumps({"meta": {}}), encoding="utf-8")
+    with pytest.raises(ValueError, match="Ожидался JSON с ключом"):
+        load_series_json(path)
+
+
+def test_load_empty_data_list(tmp_path):
+    path = tmp_path / "empty_data.json"
+    path.write_text(json.dumps({"data": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="непустым списком"):
+        load_series_json(path)
+
+
+def test_load_non_numeric_elements(tmp_path):
+    path = tmp_path / "bad_values.json"
+    path.write_text(json.dumps({"data": [1.0, "abc", 3.0]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="не число"):
+        load_series_json(path)
+
+
+def test_load_no_meta(tmp_path):
+    """Метаданные необязательны: читается файл с одним ключом data."""
+    path = tmp_path / "plain.json"
+    path.write_text(json.dumps({"data": [1, 2, 3]}), encoding="utf-8")
+    assert load_series_json(path) == [1.0, 2.0, 3.0]
